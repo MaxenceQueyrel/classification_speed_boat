@@ -1,2 +1,4 @@
 *.json
 *.jpg
+.idea
+.ipynb_checkpoints
