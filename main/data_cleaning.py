@@ -10,6 +10,6 @@ grid_box = [100, 150, 200]
 
 # Run
 list_sample_path, list_label_path = data_cleaning.create_list_label_sample(data_dir, dataset_name)
-#data_cleaning.boat_into_to_csv(csv_info_name, data_dir, dataset_name, list_label_path, list_sample_path)
+data_cleaning.boat_into_to_csv(csv_info_name, data_dir, dataset_name, list_label_path, list_sample_path)
 data_cleaning.generate_image_and_csv_with_different_bounding_box(csv_clean_name, csv_info_name, data_clean_dir,
                                                                  data_dir, dataset_name, grid_box)
