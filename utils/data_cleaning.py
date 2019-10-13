@@ -160,12 +160,13 @@ def polygone_to_min_max_coordinates(polygon):
     return xmin, xmax, ymin, ymax
 
 
-def boat_info_from_json(label_path, image_path):
+def boat_info_from_json(label_path, image_path, test_mode=False):
     """
     From a label_path and image_path get all boats info present in the image.
     Return the list of info for each boat.
     :param label_path: String, path to the label
     :param image_path: String, path to the image
+    :param test_mode: Boolean, True if their is not tags
     :return: l_res: List, list of basic info get from the json for each boat
     """
     # read the json file containing the boat info
@@ -179,13 +180,18 @@ def boat_info_from_json(label_path, image_path):
         # Finding the speed tag if not exists continue
         if "tags" not in properties:
             continue
-        speed = None
-        for speed_tag in ["idle", "fast", "slow"]:
-            if speed_tag in properties["tags"]:
-                speed = speed_tag
-        # If there is not a record_id or not speed tag then continue
-        if "record_id" not in properties or speed is None:
-            continue
+        if test_mode:
+            if "record_id" not in properties:
+                continue
+            speed = "unknown"
+        else:
+            speed = None
+            for speed_tag in ["idle", "fast", "slow"]:
+                if speed_tag in properties["tags"]:
+                    speed = speed_tag
+            # If there is not a record_id or not speed tag then continue
+            if "record_id" not in properties or speed is None:
+                continue
         xmin, xmax, ymin, ymax = polygone_to_min_max_coordinates(feature["geometry"]["coordinates"][0])
         infos.append(properties["record_id"])
         # Appending all infos
@@ -204,7 +210,7 @@ def boat_info_from_json(label_path, image_path):
     return l_res
 
 
-def boat_into_to_csv(csv_info_name, dataset_dir, dataset_name, list_label_path, list_sample_path):
+def boat_info_to_csv(csv_info_name, dataset_dir, dataset_name, list_label_path, list_sample_path, test_mode=False):
     """
     Create a csv containing all information for each boat.
     The record_id duplicate are dropped by keeping the max kept_percentage
@@ -213,6 +219,7 @@ def boat_into_to_csv(csv_info_name, dataset_dir, dataset_name, list_label_path, 
     :param dataset_name: String, name of the dataset in data_clean_dir
     :param list_label_path: List, all label path get from create_list_label_sample
     :param list_sample_path: List, all sample path get from create_list_label_sample
+    :param test_mode: Boolean, True if their is not tags
     :return:
     """
     csv_info_name = os.path.join(dataset_dir, dataset_name, csv_info_name)
@@ -220,7 +227,7 @@ def boat_into_to_csv(csv_info_name, dataset_dir, dataset_name, list_label_path, 
     col_names = ["record_id", "xmin", "xmax", "ymin", "ymax", "angle", "length", "width", "kept_percentage", "tag",
                  "image_path", "label_path"]
     for label_path, image_path in tqdm(zip(list_label_path, list_sample_path), total=len(list_label_path)):
-        l_info += boat_info_from_json(label_path, image_path)
+        l_info += boat_info_from_json(label_path, image_path, test_mode)
     # Transform list to Pandas dataframe
     df_info = pd.DataFrame(l_info, columns=col_names)
     # Removing duplicate record_id by keeping only the best 'kept_percentage'

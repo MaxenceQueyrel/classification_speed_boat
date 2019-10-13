@@ -1,0 +1,2 @@
+Validation score : 0.8294998174516247
+
