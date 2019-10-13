@@ -5,3 +5,5 @@
 *.csv
 *.jpeg
 __pycache__
+*.pt
+*.png

@@ -10,7 +10,7 @@ def save_df_preds(preds, prediction_dir, csv_preds_name, model_name, dataset_nam
     """
     Take the output of a model, apply a vote between each prediction for the same boat
      and save a csv file with all tag results
-    :param preds: 2D Numpy Array, first column il the record_id, second columns represents
+    :param preds: 2D Numpy Array, first column is the record_id, second columns represents
         the prediction as an array of three probabilities with order [idle, slow, fast]
     :param prediction_dir: String, path where are stored the outputs of the predictions
     :param csv_preds_name: String, name of the csv file that contains predictions
