@@ -1,5 +1,7 @@
 from __future__ import print_function, division
 
+from utils import plot_functions
+
 from PIL import Image
 
 import os
@@ -20,60 +22,6 @@ from sklearn.model_selection import train_test_split
 import time
 import matplotlib.pyplot as plt
 import seaborn
-from sklearn.utils.multiclass import unique_labels
-from sklearn.metrics import confusion_matrix
-
-
-def plot_confusion_matrix(y_true, y_pred, classes,
-                          normalize=False,
-                          title=None,
-                          cmap=plt.cm.Blues):
-    """
-    This function prints and plots the confusion matrix.
-    Normalization can be applied by setting `normalize=True`.
-    """
-    if not title:
-        if normalize:
-            title = 'Normalized confusion matrix'
-        else:
-            title = 'Confusion matrix, without normalization'
-
-    # Compute confusion matrix
-    cm = confusion_matrix(y_true, y_pred)
-    # Only use the labels that appear in the data
-    classes = classes[unique_labels(y_true, y_pred)]
-    if normalize:
-        cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
-        print("Normalized confusion matrix")
-    else:
-        print('Confusion matrix, without normalization')
-
-    fig, ax = plt.subplots()
-    im = ax.imshow(cm, interpolation='nearest', cmap=cmap)
-    ax.figure.colorbar(im, ax=ax)
-    # We want to show all ticks...
-    ax.set(xticks=np.arange(cm.shape[1]),
-           yticks=np.arange(cm.shape[0]),
-           # ... and label them with the respective list entries
-           xticklabels=classes, yticklabels=classes,
-           title=title,
-           ylabel='True label',
-           xlabel='Predicted label')
-
-    # Rotate the tick labels and set their alignment.
-    plt.setp(ax.get_xticklabels(), rotation=45, ha="right",
-             rotation_mode="anchor")
-
-    # Loop over data dimensions and create text annotations.
-    fmt = '.2f' if normalize else 'd'
-    thresh = cm.max() / 2.
-    for i in range(cm.shape[0]):
-        for j in range(cm.shape[1]):
-            ax.text(j, i, format(cm[i, j], fmt),
-                    ha="center", va="center",
-                    color="white" if cm[i, j] > thresh else "black")
-    fig.tight_layout()
-    return ax
 
 
 def pil_loader(path):
@@ -100,10 +48,13 @@ def show_tensor_image(tensor):
 def create_valid_train_set(csv_info_name, data_clean_dir, dataset_name, test_size):
     csv_info_name = os.path.join(data_clean_dir, dataset_name, csv_info_name)
     csv_info = pd.read_csv(csv_info_name)
-    X_train, X_valid = train_test_split(csv_info, test_size=test_size,
-                                        random_state=42, stratify=csv_info["tag"])
-    X_train_tmp = X_train[X_train["tag"] != "idle"]
+    tmp = csv_info[["record_id", "tag"]].drop_duplicates()
+    X_train, X_valid = train_test_split(tmp, test_size=test_size,
+                                        random_state=42, stratify=tmp["tag"])
+    X_train = X_train[["record_id"]].merge(csv_info, on="record_id")
+    X_valid = X_valid[["record_id"]].merge(csv_info, on="record_id")
 
+    X_train_tmp = X_train[X_train["tag"] != "idle"]
     X_train = pd.concat([X_train, *([X_train_tmp] * 4)], axis=0)
     return X_train, X_valid
 
@@ -230,8 +181,8 @@ def trainNet(net, batch_size, n_epochs, learning_rate, train_dataset, valid_data
             val_loss_size = loss(val_outputs, labels)
             total_val_loss += val_loss_size.detach().item()
 
-        L_loss_train.append(total_train_loss)
-        L_loss_valid.append(total_val_loss)
+        L_loss_train.append(total_train_loss / len(train_loader))
+        L_loss_valid.append(total_val_loss / len(valid_loader))
 
         if total_val_loss < best_valid_loss:
             best_valid_loss = total_val_loss
@@ -278,8 +229,8 @@ if __name__ == "__main__":
     dataset_name = "train"
     csv_clean_name = "info_boat.csv"
 
-    model_name = "cnn"
-    net_name = "cnn_basic_2.pt"
+    model_name = "cnn3"
+    net_name = "cnn_basic.pt"
     prediction_dir = "/classification_speed_boat/prediction/"
     path_model = os.path.join(prediction_dir, model_name)
     if not os.path.exists(path_model):
@@ -309,7 +260,7 @@ if __name__ == "__main__":
     output_size = 3
 
     n_epochs = 50
-    learning_rate = 0.001
+    learning_rate = 0.0005
 
     cnn = Net(input_size, output_size)
     cnn = cnn.to(device)
@@ -323,6 +274,7 @@ if __name__ == "__main__":
                               num_workers=num_workers, shuffle=True)
 
     score, y_true, y_pred, y_softmax = compute_score(cnn, valid_loader)
-    ax = plot_confusion_matrix(y_true, y_pred, train_dataset.classes_,
+    print("Validation score : %s\n" % score)
+    ax = plot_functions.plot_confusion_matrix(y_true, y_pred, train_dataset.classes_,
                                  cmap=plt.cm.Blues)
     ax.get_figure().savefig(os.path.join(path_model, "confusion_matrix.png"))
